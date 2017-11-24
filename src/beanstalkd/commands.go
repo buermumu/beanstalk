@@ -12,7 +12,7 @@ func cmd_use(argv Argv) bytes.Buffer {
 		"use",
 		argv.Tube,
 	}
-	if err := assert_cmd_use(cmd); err != nil {
+	if err := assert_tube_name(argv.Tube); err != nil {
 		panic(err)
 	}
 	return _protocol(cmd)
@@ -67,6 +67,7 @@ func cmd_bury(argv Argv) bytes.Buffer {
 	cmd := []interface{}{
 		"bury",
 		argv.Id,
+		argv.Pri,
 	}
 	// assert_cmd_bury
 	return _protocol(cmd)

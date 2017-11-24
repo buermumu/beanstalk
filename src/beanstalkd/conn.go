@@ -33,6 +33,7 @@ func Dial(network, dns string) *Conn {
 func (c *Conn) Do(cmd string, argv ...Argv) (interface{}, error) {
 	var (
 		//size         int
+		d            interface{}
 		err          error
 		cmd_buf      bytes.Buffer
 		argument     Argv
@@ -63,7 +64,7 @@ func (c *Conn) Do(cmd string, argv ...Argv) (interface{}, error) {
 
 	// Process response
 	response_argv := cmd_res_func()
-	d, _ := response(c.br, response_argv)
+	d, err = response(c.br, response_argv)
 	c.br.Reset(c.conn)
 	return d, err
 }
@@ -86,7 +87,7 @@ func response(r *bufio.Reader, response_argv Response) (interface{}, error) {
 		}
 		eof, err := parse_response(line, &buffer, index, response_argv, &data, &body_len)
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
 		if eof {
 			break

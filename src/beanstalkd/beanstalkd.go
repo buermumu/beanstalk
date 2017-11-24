@@ -145,5 +145,5 @@ func init() {
 	cmdMaps["list-tubes"] = cmdExtra{cmd_list_tubes, cmd_res_list_tubes}
 	cmdMaps["list-tube-used"] = cmdExtra{cmd_list_tube_used, cmd_res_list_tube_used}
 	cmdMaps["list-tubes-watched"] = cmdExtra{cmd_list_tubes_watched, cmd_res_list_tubes_watched}
-	cmdMaps["pause_tube"] = cmdExtra{cmd_pause_tube, cmd_res_pause_tube}
+	cmdMaps["pause-tube"] = cmdExtra{cmd_pause_tube, cmd_res_pause_tube}
 }
