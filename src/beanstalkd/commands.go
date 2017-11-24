@@ -2,8 +2,6 @@ package beanstalkd
 
 import (
 	"bytes"
-	_ "fmt"
-	_ "time"
 )
 
 // Use tube

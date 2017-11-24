@@ -1,7 +1,6 @@
 package beanstalkd
 
 import (
-	_ "bufio"
 	"bytes"
 	"fmt"
 	"strconv"
@@ -25,18 +24,23 @@ var (
 
 	// Max tube bytes
 	max_tube int32 = 200
+
+	// Default tube name
+	def_tube string = "default"
+
+	// Name chars
+	tube_name_chars = "\\-+/;.$_()0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
 )
 
 var (
-	cmdMaps map[string]cmdExtra
+	cmdMaps map[string]cmdHandlers
 )
 
-type cmdFunc func(Argv) bytes.Buffer
-type cmdResFunc func() Response
-
-type cmdExtra struct {
-	cmd_func cmdFunc
-	cmd_res  cmdResFunc
+type cmdReqProtocolFunc func(Argv) bytes.Buffer
+type cmdResProtocolFunc func() Response
+type cmdHandlers struct {
+	cmd_req_protocol_func cmdReqProtocolFunc
+	cmd_res_protocol_func cmdResProtocolFunc
 }
 
 // cmd argvs
@@ -53,12 +57,14 @@ type Argv struct {
 
 // cmd untis convert beanstalkd protocol
 func convertProtocol(w *bytes.Buffer, cmdUnits []interface{}) (int, error) {
-	var buf_space byte = 32
-	var buf_r byte = 13
-	var buf_n byte = 10
-	var size, n int
-	var err error
-	var dst []byte
+	var (
+		buf_space byte = 32
+		buf_r     byte = 13
+		buf_n     byte = 10
+		size, n   int
+		err       error
+		dst       []byte
+	)
 	cmd_len := len(cmdUnits)
 	for _, item := range cmdUnits {
 		switch v := item.(type) {
@@ -104,7 +110,9 @@ func convertProtocol(w *bytes.Buffer, cmdUnits []interface{}) (int, error) {
 }
 
 func _protocol(cmd []interface{}) bytes.Buffer {
-	var buffer bytes.Buffer
+	var (
+		buffer bytes.Buffer
+	)
 	if _, err := convertProtocol(&buffer, cmd); err != nil {
 		panic(err)
 	}
@@ -112,38 +120,26 @@ func _protocol(cmd []interface{}) bytes.Buffer {
 }
 
 func init() {
-	cmdMaps = make(map[string]cmdExtra)
-	cmdMaps["put"] = cmdExtra{
-		cmd_put,
-		cmd_res_put,
-	}
-	cmdMaps["use"] = cmdExtra{
-		cmd_use,
-		cmd_res_use,
-	}
-	cmdMaps["stats"] = cmdExtra{
-		cmd_stats,
-		cmd_res_stats,
-	}
-	cmdMaps["reserve"] = cmdExtra{
-		cmd_reserve,
-		cmd_res_reserve,
-	}
-	cmdMaps["delete"] = cmdExtra{cmd_delete, cmd_res_delete}
-	cmdMaps["release"] = cmdExtra{cmd_release, cmd_res_release}
-	cmdMaps["bury"] = cmdExtra{cmd_bury, cmd_res_bury}
-	cmdMaps["touch"] = cmdExtra{cmd_touch, cmd_res_touch}
-	cmdMaps["watch"] = cmdExtra{cmd_watch, cmd_res_watch}
-	cmdMaps["ignore"] = cmdExtra{cmd_ignore, cmd_res_ignore}
-	cmdMaps["peek"] = cmdExtra{cmd_peek, cmd_res_peek}
-	cmdMaps["peek-ready"] = cmdExtra{cmd_peek_ready, cmd_res_peek_ready}
-	cmdMaps["peek-delayed"] = cmdExtra{cmd_peek_delayed, cmd_res_peek_delayed}
-	cmdMaps["peek-buried"] = cmdExtra{cmd_peek_buried, cmd_res_peek_buried}
-	cmdMaps["kick"] = cmdExtra{cmd_kick, cmd_res_kick}
-	cmdMaps["stats-job"] = cmdExtra{cmd_stats_job, cmd_res_stats_job}
-	cmdMaps["stats-tube"] = cmdExtra{cmd_stats_tube, cmd_res_stats_tube}
-	cmdMaps["list-tubes"] = cmdExtra{cmd_list_tubes, cmd_res_list_tubes}
-	cmdMaps["list-tube-used"] = cmdExtra{cmd_list_tube_used, cmd_res_list_tube_used}
-	cmdMaps["list-tubes-watched"] = cmdExtra{cmd_list_tubes_watched, cmd_res_list_tubes_watched}
-	cmdMaps["pause-tube"] = cmdExtra{cmd_pause_tube, cmd_res_pause_tube}
+	cmdMaps = make(map[string]cmdHandlers)
+	cmdMaps["put"] = cmdHandlers{cmd_put, cmd_res_put}
+	cmdMaps["use"] = cmdHandlers{cmd_use, cmd_res_use}
+	cmdMaps["stats"] = cmdHandlers{cmd_stats, cmd_res_stats}
+	cmdMaps["reserve"] = cmdHandlers{cmd_reserve, cmd_res_reserve}
+	cmdMaps["delete"] = cmdHandlers{cmd_delete, cmd_res_delete}
+	cmdMaps["release"] = cmdHandlers{cmd_release, cmd_res_release}
+	cmdMaps["bury"] = cmdHandlers{cmd_bury, cmd_res_bury}
+	cmdMaps["touch"] = cmdHandlers{cmd_touch, cmd_res_touch}
+	cmdMaps["watch"] = cmdHandlers{cmd_watch, cmd_res_watch}
+	cmdMaps["ignore"] = cmdHandlers{cmd_ignore, cmd_res_ignore}
+	cmdMaps["peek"] = cmdHandlers{cmd_peek, cmd_res_peek}
+	cmdMaps["peek-ready"] = cmdHandlers{cmd_peek_ready, cmd_res_peek_ready}
+	cmdMaps["peek-delayed"] = cmdHandlers{cmd_peek_delayed, cmd_res_peek_delayed}
+	cmdMaps["peek-buried"] = cmdHandlers{cmd_peek_buried, cmd_res_peek_buried}
+	cmdMaps["kick"] = cmdHandlers{cmd_kick, cmd_res_kick}
+	cmdMaps["stats-job"] = cmdHandlers{cmd_stats_job, cmd_res_stats_job}
+	cmdMaps["stats-tube"] = cmdHandlers{cmd_stats_tube, cmd_res_stats_tube}
+	cmdMaps["list-tubes"] = cmdHandlers{cmd_list_tubes, cmd_res_list_tubes}
+	cmdMaps["list-tube-used"] = cmdHandlers{cmd_list_tube_used, cmd_res_list_tube_used}
+	cmdMaps["list-tubes-watched"] = cmdHandlers{cmd_list_tubes_watched, cmd_res_list_tubes_watched}
+	cmdMaps["pause-tube"] = cmdHandlers{cmd_pause_tube, cmd_res_pause_tube}
 }

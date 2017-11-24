@@ -5,8 +5,6 @@ import (
 	"fmt"
 )
 
-var tube_name_chars = "\\-+/;.$_()0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-
 func assert_tube_name(tube string) error {
 	tube_len := len(tube)
 	if tube_len == 0 {

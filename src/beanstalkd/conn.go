@@ -4,11 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	_ "io"
 	"net"
-	_ "os"
-	_ "reflect"
-	_ "strconv"
 )
 
 type Conn struct {
@@ -32,26 +28,29 @@ func Dial(network, dns string) *Conn {
 
 func (c *Conn) Do(cmd string, argv ...Argv) (interface{}, error) {
 	var (
-		//size         int
-		d            interface{}
-		err          error
-		cmd_buf      bytes.Buffer
-		argument     Argv
-		cmd_res_func cmdResFunc
+		d                     interface{}
+		err                   error
+		cmd_buf               bytes.Buffer
+		argument              Argv
+		cmd_res_protocol_func cmdResProtocolFunc
 	)
 
 	// Set argument default values
 	if len(argv) > 0 {
 		argument = argv[0]
-		if argument.Pri == 0 {
-			argument.Pri = def_pri
-		}
+	}
+
+	if argument.Pri == 0 {
+		argument.Pri = def_pri
+	}
+	if len(argument.Tube) == 0 {
+		argument.Tube = def_tube
 	}
 
 	// Client cmd check
 	if row, exists := cmdMaps[cmd]; exists {
-		cmd_buf = row.cmd_func(argument)
-		cmd_res_func = row.cmd_res
+		cmd_buf = row.cmd_req_protocol_func(argument)
+		cmd_res_protocol_func = row.cmd_res_protocol_func
 	} else {
 		panic(fmt.Errorf("ErrorCmd :%s does not support", cmd))
 	}
@@ -63,7 +62,7 @@ func (c *Conn) Do(cmd string, argv ...Argv) (interface{}, error) {
 	}
 
 	// Process response
-	response_argv := cmd_res_func()
+	response_argv := cmd_res_protocol_func()
 	d, err = response(c.br, response_argv)
 	c.br.Reset(c.conn)
 	return d, err
@@ -71,11 +70,11 @@ func (c *Conn) Do(cmd string, argv ...Argv) (interface{}, error) {
 
 // Parse response to buffer
 func response(r *bufio.Reader, response_argv Response) (interface{}, error) {
-	var buffer bytes.Buffer
-	var index uint8
-	var data [][]byte
-	var body_len int64
-
+	var (
+		index    uint8
+		data     [][]byte
+		body_len int64
+	)
 	for {
 		line, err := r.ReadBytes('\n')
 		if err != nil {
@@ -85,7 +84,7 @@ func response(r *bufio.Reader, response_argv Response) (interface{}, error) {
 		if length == 0 {
 			panic(fmt.Errorf("ErrorResponse :%s", "read 0 bytes"))
 		}
-		eof, err := parse_response(line, &buffer, index, response_argv, &data, &body_len)
+		eof, err := parse_response(line, index, response_argv, &data, &body_len)
 		if err != nil {
 			return nil, err
 		}
@@ -95,26 +94,13 @@ func response(r *bufio.Reader, response_argv Response) (interface{}, error) {
 		index++
 	}
 	return response_argv.parser(data)
-
-	//return cmd_parse_stats(data), nil
-
-	//for _, x := range data {
-	//fmt.Printf("%s\n", x)
-	//}
-
-	//fmt.Println(data)
-	//buffer.WriteTo(os.Stdout)
-	//return nil, nil
 }
 
-func parse_response(line []byte, buffer *bytes.Buffer, index uint8, response_argv Response, data *[][]byte, body_len *int64) (bool, error) {
-	//space := []byte{32}
+func parse_response(line []byte, index uint8, response_argv Response, data *[][]byte, body_len *int64) (bool, error) {
 	line_length := len(line)
-	line_length--
-
-	_ = buffer
 
 	// Check line suffix
+	line_length--
 	if line[line_length] != '\n' {
 		panic(fmt.Errorf("ErrorResponse :%s", "protocol error"))
 	}
@@ -210,7 +196,6 @@ func getBytes(head []byte, c byte) []byte {
 func flush(w *bufio.Writer) error {
 	if w.Buffered() > 0 {
 		return w.Flush()
-	} else {
-		return fmt.Errorf("ErrorFlush %s:", "empty buffer")
 	}
+	return fmt.Errorf("ErrorFlush %s:", "empty buffer")
 }
